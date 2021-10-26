@@ -25,39 +25,39 @@ pipeline {
       }
     }
 
-    stage('package') {
+    stage('Parallel State') {
       when {
         branch 'master'
       }
-      agent {
-        docker {
-          image 'maven:3.6.3-jdk-11-slim'
+      parallel {
+        stage('package') {
+          agent {
+            docker {
+              image 'maven:3.6.3-jdk-11-slim'
+            }
+
+          }
+          steps {
+            sh 'mvn package -DskipTests'
+            archiveArtifacts 'target/*.war'
+          }
         }
 
-      }
-      steps {
-        sh 'mvn package -DskipTests'
-        archiveArtifacts 'target/*.war'
-      }
-    }
-
-    stage('DockerBnP') {
-      when {
-        branch 'master'
-      }
-      agent any
-      steps {
-        script {
-          docker.withRegistry('https://index.docker.io/v1/', 'dockerlogin') {
-            def dockerImage = docker.build("shitizag/sysfoo:v${env.BUILD_ID}", "./")
-            dockerImage.push()
-            dockerImage.push("latest")
-            dockerImage.push("dev")
+        stage('DockerBnP') {
+          agent any
+          steps {
+            script {
+              docker.withRegistry('https://index.docker.io/v1/', 'dockerlogin') {
+                def dockerImage = docker.build("shitizag/sysfoo:v${env.BUILD_ID}", "./")
+                dockerImage.push()
+                dockerImage.push("latest")
+                dockerImage.push("dev")
+              }
+            }
           }
         }
       }
     }
-
   }
   post {
     always {
